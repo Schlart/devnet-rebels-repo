@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GraphHopper Route Planner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 14px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .results {
+            margin-top: 30px;
+            display: none;
+        }
+        
+        .results.show {
+            display: block;
+        }
+        
+        .result-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .result-card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+        
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .stat:last-child {
+            border-bottom: none;
+        }
+        
+        .stat-label {
+            font-weight: 600;
+            color: #666;
+        }
+        
+        .stat-value {
+            color: #333;
+        }
+        
+        .instructions {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .instruction-item {
+            padding: 12px;
+            margin-bottom: 8px;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .instruction-text {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .instruction-distance {
+            color: #666;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+        
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .error.show {
+            display: block;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+        
+        .loading.show {
+            display: block;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .map-btn {
+            background: #28a745;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗺️ GraphHopper Route Planner</h1>
+            <p>Plan your route with turn-by-turn directions</p>
+        </div>
+        
+        <div class="content">
+            <div class="form-group">
+                <label for="api-key">GraphHopper API Key:</label>
+                <input type="text" id="api-key" placeholder="Enter your API key">
+            </div>
+            
+            <div class="form-group">
+                <label for="start-location">Start Location:</label>
+                <input type="text" id="start-location" value="Berlin, Germany" placeholder="e.g., Berlin, Germany">
+            </div>
+            
+            <div class="form-group">
+                <label for="end-location">End Location:</label>
+                <input type="text" id="end-location" value="Munich, Germany" placeholder="e.g., Munich, Germany">
+            </div>
+            
+            <div class="form-group">
+                <label for="vehicle">Vehicle Type:</label>
+                <select id="vehicle">
+                    <option value="car">Car</option>
+                    <option value="bike">Bike</option>
+                    <option value="foot">Foot</option>
+                </select>
+            </div>
+            
+            <button class="btn" onclick="calculateRoute()">Calculate Route</button>
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p style="margin-top: 10px;">Calculating route...</p>
+            </div>
+            
+            <div class="error" id="error"></div>
+            
+            <div class="results" id="results">
+                <div class="result-card">
+                    <h3>Route Summary</h3>
+                    <div class="stat">
+                        <span class="stat-label">Start:</span>
+                        <span class="stat-value" id="result-start"></span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">End:</span>
+                        <span class="stat-value" id="result-end"></span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Distance:</span>
+                        <span class="stat-value" id="result-distance"></span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Duration:</span>
+                        <span class="stat-value" id="result-time"></span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Vehicle:</span>
+                        <span class="stat-value" id="result-vehicle"></span>
+                    </div>
+                    <button class="btn map-btn" onclick="openMap()" id="map-btn">View on GraphHopper Maps</button>
+                </div>
+                
+                <div class="result-card">
+                    <h3>Turn-by-Turn Directions</h3>
+                    <div class="instructions" id="instructions"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let mapUrl = '';
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+            setTimeout(() => {
+                errorDiv.classList.remove('show');
+            }, 5000);
+        }
+        
+        function showLoading(show) {
+            const loadingDiv = document.getElementById('loading');
+            const btn = document.querySelector('.btn');
+            if (show) {
+                loadingDiv.classList.add('show');
+                btn.disabled = true;
+            } else {
+                loadingDiv.classList.remove('show');
+                btn.disabled = false;
+            }
+        }
+        
+        async function calculateRoute() {
+            const apiKey = document.getElementById('api-key').value;
+            const startLocation = document.getElementById('start-location').value;
+            const endLocation = document.getElementById('end-location').value;
+            const vehicle = document.getElementById('vehicle').value;
+            
+            if (!apiKey) {
+                showError('Please enter your GraphHopper API Key');
+                return;
+            }
+            
+            if (!startLocation || !endLocation) {
+                showError('Please enter both start and end locations');
+                return;
+            }
+            
+            document.getElementById('results').classList.remove('show');
+            showLoading(true);
+            
+            try {
+                // Geocode start location
+                const startResponse = await fetch('/geocode', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        location: startLocation,
+                        api_key: apiKey
+                    })
+                });
+                const startData = await startResponse.json();
+                
+                if (!startData.success) {
+                    showError(startData.error);
+                    showLoading(false);
+                    return;
+                }
+                
+                // Geocode end location
+                const endResponse = await fetch('/geocode', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        location: endLocation,
+                        api_key: apiKey
+                    })
+                });
+                const endData = await endResponse.json();
+                
+                if (!endData.success) {
+                    showError(endData.error);
+                    showLoading(false);
+                    return;
+                }
+                
+                // Calculate route
+                const routeResponse = await fetch('/route', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        start_coords: { lat: startData.lat, lng: startData.lng },
+                        end_coords: { lat: endData.lat, lng: endData.lng },
+                        vehicle: vehicle,
+                        api_key: apiKey
+                    })
+                });
+                const routeData = await routeResponse.json();
+                
+                showLoading(false);
+                
+                if (!routeData.success) {
+                    showError(routeData.error);
+                    return;
+                }
+                
+                // Display results
+                document.getElementById('result-start').textContent = startLocation;
+                document.getElementById('result-end').textContent = endLocation;
+                document.getElementById('result-distance').textContent = `${routeData.distance} km`;
+                document.getElementById('result-time').textContent = `${routeData.time} minutes (${routeData.hours} hours)`;
+                document.getElementById('result-vehicle').textContent = vehicle.charAt(0).toUpperCase() + vehicle.slice(1);
+                
+                // Display instructions
+                const instructionsDiv = document.getElementById('instructions');
+                instructionsDiv.innerHTML = '';
+                routeData.instructions.forEach((instruction, index) => {
+                    const div = document.createElement('div');
+                    div.className = 'instruction-item';
+                    div.innerHTML = `
+                        <div class="instruction-text">${index + 1}. ${instruction.text}</div>
+                        <div class="instruction-distance">${Math.round(instruction.distance)}m</div>
+                    `;
+                    instructionsDiv.appendChild(div);
+                });
+                
+                mapUrl = routeData.map_url;
+                document.getElementById('results').classList.add('show');
+                
+            } catch (error) {
+                showLoading(false);
+                showError('Network error: ' + error.message);
+            }
+        }
+        
+        function openMap() {
+            if (mapUrl) {
+                window.open(mapUrl, '_blank');
+            }
+        }
+        
+        // Allow Enter key to submit
+        document.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                calculateRoute();
+            }
+        });
+    </script>
+</body>
+</html>
